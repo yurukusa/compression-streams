@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compression Streams API Playground — Dev Toolkit</title>
+<meta name="description" content="Interactive Compression Streams API playground. Compress and decompress text in the browser with gzip, deflate, deflate-raw. Size comparison and hex output.">
+<meta property="og:title" content="Compression Streams API Playground — Dev Toolkit">
+<meta property="og:description" content="Test browser-native compression. gzip, deflate, deflate-raw. See compressed size, ratio, and hex dump.">
+<meta property="og:type" content="website">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg-elevated: #141414;
+  --bg-surface: #1a1a1a;
+  --bg-input: #222222;
+  --border: #2a2a2a;
+  --border-hover: #3a3a3a;
+  --text: #e6e6e6;
+  --text-secondary: #999;
+  --text-dim: #666;
+  --accent: #34d399;
+  --accent-hover: #10b981;
+  --accent-glow: rgba(52, 211, 153, 0.15);
+  --green: #22c55e;
+  --orange: #f59e0b;
+  --red: #ef4444;
+  --radius: 8px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+html { font-size: 14px; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-elevated);
+}
+.header h1 { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.header h1 .icon {
+  width: 28px; height: 28px; background: var(--accent); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+}
+.badge { font-size: 0.75rem; padding: 3px 8px; background: var(--accent-glow); color: var(--accent); border-radius: 99px; font-weight: 600; }
+.header-right a { color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; }
+
+.layout { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 57px); }
+
+/* Input panel */
+.input-panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg-elevated);
+}
+.panel-header h3 { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+
+.toolbar {
+  display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated); flex-wrap: wrap; align-items: center;
+}
+.format-btns { display: flex; gap: 4px; }
+.format-btn {
+  padding: 5px 14px; border-radius: 6px; font-family: var(--font);
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.format-btn:hover { border-color: var(--accent); color: var(--accent); }
+.format-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+.mode-btns { display: flex; gap: 4px; margin-left: auto; }
+.mode-btn {
+  padding: 5px 14px; border-radius: 6px; font-family: var(--font);
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary);
+}
+.mode-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+.text-area {
+  flex: 1; display: flex; flex-direction: column;
+}
+.text-area textarea {
+  flex: 1; width: 100%; resize: none; border: none; outline: none;
+  font-family: var(--mono); font-size: 0.85rem; line-height: 1.6;
+  padding: 16px; background: var(--bg); color: var(--text);
+}
+
+.action-bar {
+  display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border);
+  background: var(--bg-elevated); align-items: center;
+}
+.btn-primary {
+  padding: 8px 20px; border-radius: var(--radius); font-family: var(--font);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  border: none; background: var(--accent); color: #000; transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-outline {
+  padding: 6px 14px; border-radius: var(--radius); font-family: var(--font);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-surface); color: var(--text);
+}
+.btn-outline.copied { border-color: var(--green); color: var(--green); }
+
+.sample-btns { display: flex; gap: 4px; }
+.sample-btn {
+  padding: 4px 10px; border-radius: 4px; font-family: var(--font);
+  font-size: 0.7rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-input); color: var(--text-dim);
+}
+.sample-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Output panel */
+.output-panel { display: flex; flex-direction: column; }
+
+/* Stats */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-elevated);
+}
+.stat-card { text-align: center; }
+.stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-bottom: 2px; }
+.stat-value { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+.stat-value.neutral { color: var(--text); }
+
+/* Comparison bar */
+.comparison-bar {
+  padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-surface);
+}
+.bar-wrapper { display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; }
+.bar-original {
+  background: var(--text-dim); display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; color: #fff; transition: width 0.3s;
+}
+.bar-compressed {
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; color: #000; transition: width 0.3s;
+}
+.bar-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.7rem; color: var(--text-dim); }
+
+/* Tab bar */
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  padding: 8px 18px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--text-secondary);
+  font-family: var(--font); font-size: 0.8rem; font-weight: 600;
+  cursor: pointer;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Output areas */
+.output-content { flex: 1; overflow: auto; }
+.tab-content { display: none; height: 100%; }
+.tab-content.active { display: flex; flex-direction: column; }
+
+.output-text {
+  flex: 1; padding: 16px; font-family: var(--mono); font-size: 0.8rem;
+  line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+  overflow: auto; background: var(--bg);
+}
+.hex-grid {
+  display: grid; grid-template-columns: 70px 1fr 1fr;
+  font-family: var(--mono); font-size: 0.75rem; line-height: 1.8;
+  padding: 16px; overflow: auto; background: var(--bg);
+}
+.hex-offset { color: var(--text-dim); }
+.hex-bytes { color: var(--accent); word-spacing: 4px; }
+.hex-ascii { color: var(--text-secondary); }
+
+/* Code panel */
+.code-area {
+  flex: 1; padding: 16px; overflow: auto; background: var(--bg);
+}
+.code-area pre { font-family: var(--mono); font-size: 0.8rem; line-height: 1.7; white-space: pre-wrap; }
+.kw { color: #c084fc; }
+.fn { color: #67e8f9; }
+.str { color: #86efac; }
+.num { color: #fbbf24; }
+.cmt { color: var(--text-dim); font-style: italic; }
+
+.info-bar {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  background: var(--bg-elevated); font-size: 0.8rem; color: var(--text-secondary);
+  display: flex; gap: 16px; align-items: center;
+}
+.tag-green { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(34,197,94,0.15); color: var(--green); }
+
+/* All formats comparison */
+.all-formats {
+  padding: 16px; overflow: auto; background: var(--bg);
+}
+.fmt-table { width: 100%; border-collapse: collapse; }
+.fmt-table th {
+  text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+}
+.fmt-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 0.85rem;
+}
+.fmt-table tr:hover td { background: var(--bg-surface); }
+.best-value { color: var(--accent); font-weight: 700; }
+
+.empty-state {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 0.9rem;
+}
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .input-panel { min-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>
+    <span class="icon">Gz</span>
+    Compression Streams Playground
+    <span class="badge">Web API</span>
+  </h1>
+  <div class="header-right">
+    <a href="https://yurukusa.github.io/dev-toolkit/">Dev Toolkit</a>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Input -->
+  <div class="input-panel">
+    <div class="panel-header">
+      <h3>Input</h3>
+      <div class="sample-btns">
+        <button class="sample-btn" data-sample="json">JSON</button>
+        <button class="sample-btn" data-sample="html">HTML</button>
+        <button class="sample-btn" data-sample="csv">CSV</button>
+        <button class="sample-btn" data-sample="lorem">Lorem</button>
+        <button class="sample-btn" data-sample="repeat">Repeat</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="format-btns">
+        <button class="format-btn active" data-fmt="gzip">gzip</button>
+        <button class="format-btn" data-fmt="deflate">deflate</button>
+        <button class="format-btn" data-fmt="deflate-raw">deflate-raw</button>
+      </div>
+      <div class="mode-btns">
+        <button class="mode-btn active" data-mode="compress">Compress</button>
+        <button class="mode-btn" data-mode="decompress">Decompress</button>
+      </div>
+    </div>
+    <div class="text-area">
+      <textarea id="inputText" placeholder="Paste text here to compress..."></textarea>
+    </div>
+    <div class="action-bar">
+      <button class="btn-primary" id="runBtn">Compress</button>
+      <button class="btn-outline" id="compareBtn">Compare All Formats</button>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:0.75rem;color:var(--text-dim)" id="inputSize">0 bytes</span>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-panel">
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Original</div>
+        <div class="stat-value neutral" id="statOriginal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Compressed</div>
+        <div class="stat-value" id="statCompressed">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ratio</div>
+        <div class="stat-value" id="statRatio">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time</div>
+        <div class="stat-value" id="statTime">—</div>
+      </div>
+    </div>
+
+    <div class="comparison-bar" id="comparisonBar" style="display:none;">
+      <div class="bar-wrapper">
+        <div class="bar-compressed" id="barCompressed" style="width:50%">compressed</div>
+        <div class="bar-original" id="barSaved" style="width:50%">saved</div>
+      </div>
+      <div class="bar-labels">
+        <span id="barLabelLeft">compressed</span>
+        <span id="barLabelRight">saved</span>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="base64">Base64</button>
+      <button class="tab-btn" data-tab="hex">Hex Dump</button>
+      <button class="tab-btn" data-tab="compare">All Formats</button>
+      <button class="tab-btn" data-tab="code">Code</button>
+    </div>
+
+    <div class="output-content">
+      <div class="tab-content active" id="tab-base64">
+        <div class="output-text" id="outputBase64">
+          <div class="empty-state">Compress something to see output</div>
+        </div>
+      </div>
+      <div class="tab-content" id="tab-hex">
+        <div class="output-text" id="outputHex">
+          <div class="empty-state">Compress something to see hex dump</div>
+        </div>
+      </div>
+      <div class="tab-content" id="tab-compare">
+        <div class="all-formats" id="outputCompare">
+          <div class="empty-state">Click "Compare All Formats" to see side-by-side comparison</div>
+        </div>
+      </div>
+      <div class="tab-content" id="tab-code">
+        <div class="code-area"><pre id="outputCode"></pre></div>
+      </div>
+    </div>
+
+    <div class="info-bar">
+      <span class="tag-green">All modern browsers</span>
+      <span style="color:var(--text-dim)">CompressionStream / DecompressionStream — no libraries needed</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const inputText = document.getElementById('inputText');
+  const runBtn = document.getElementById('runBtn');
+  const compareBtn = document.getElementById('compareBtn');
+  const inputSize = document.getElementById('inputSize');
+
+  let currentFormat = 'gzip';
+  let currentMode = 'compress';
+  let lastCompressedBytes = null;
+
+  // Samples
+  const SAMPLES = {
+    json: `{
+  "users": [
+    {"id": 1, "name": "Alice", "email": "alice@example.com", "role": "admin"},
+    {"id": 2, "name": "Bob", "email": "bob@example.com", "role": "user"},
+    {"id": 3, "name": "Charlie", "email": "charlie@example.com", "role": "user"},
+    {"id": 4, "name": "Diana", "email": "diana@example.com", "role": "moderator"},
+    {"id": 5, "name": "Eve", "email": "eve@example.com", "role": "user"}
+  ],
+  "meta": {"total": 5, "page": 1, "per_page": 10}
+}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Page</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    p { line-height: 1.6; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hello World</h1>
+    <p>This is a sample HTML page for compression testing.</p>
+  </div>
+</body>
+</html>`,
+    csv: `id,name,email,department,salary,start_date
+1,Alice Johnson,alice@company.com,Engineering,95000,2020-01-15
+2,Bob Smith,bob@company.com,Marketing,72000,2019-06-22
+3,Charlie Brown,charlie@company.com,Engineering,88000,2021-03-10
+4,Diana Prince,diana@company.com,Design,79000,2020-11-01
+5,Eve Wilson,eve@company.com,Engineering,92000,2018-09-14
+6,Frank Castle,frank@company.com,Operations,68000,2022-01-03
+7,Grace Hopper,grace@company.com,Engineering,105000,2017-04-20
+8,Hank Pym,hank@company.com,Research,97000,2019-08-11
+9,Iris West,iris@company.com,Marketing,71000,2021-07-28
+10,Jack Ryan,jack@company.com,Security,89000,2020-05-06`,
+    lorem: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.`,
+    repeat: 'The quick brown fox jumps over the lazy dog. '.repeat(50),
+  };
+
+  // Compress
+  async function compress(text, format) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const cs = new CompressionStream(format);
+    const writer = cs.writable.getWriter();
+    writer.write(data);
+    writer.close();
+    const reader = cs.readable.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return result;
+  }
+
+  // Decompress
+  async function decompress(bytes, format) {
+    const ds = new DecompressionStream(format);
+    const writer = ds.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const reader = ds.readable.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return new TextDecoder().decode(result);
+  }
+
+  // Helpers
+  function bytesToBase64(bytes) {
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  }
+
+  function base64ToBytes(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function hexDump(bytes) {
+    let html = '<div class="hex-grid">';
+    for (let i = 0; i < bytes.length; i += 16) {
+      const slice = bytes.slice(i, Math.min(i + 16, bytes.length));
+      const offset = i.toString(16).padStart(8, '0');
+      const hex = Array.from(slice).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      const ascii = Array.from(slice).map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : '.').join('');
+      html += `<span class="hex-offset">${offset}</span><span class="hex-bytes">${hex}</span><span class="hex-ascii">${ascii}</span>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // Run
+  async function run() {
+    const text = inputText.value;
+    if (!text) return;
+
+    const t0 = performance.now();
+
+    if (currentMode === 'compress') {
+      const originalBytes = new TextEncoder().encode(text);
+      const compressed = await compress(text, currentFormat);
+      const t1 = performance.now();
+
+      lastCompressedBytes = compressed;
+      const ratio = ((1 - compressed.length / originalBytes.length) * 100).toFixed(1);
+
+      // Stats
+      document.getElementById('statOriginal').textContent = formatBytes(originalBytes.length);
+      document.getElementById('statCompressed').textContent = formatBytes(compressed.length);
+      document.getElementById('statRatio').textContent = ratio + '%';
+      document.getElementById('statTime').textContent = (t1 - t0).toFixed(1) + 'ms';
+
+      // Comparison bar
+      const compBar = document.getElementById('comparisonBar');
+      compBar.style.display = 'block';
+      const pct = Math.max(5, (compressed.length / originalBytes.length) * 100);
+      document.getElementById('barCompressed').style.width = pct + '%';
+      document.getElementById('barCompressed').textContent = formatBytes(compressed.length);
+      document.getElementById('barSaved').style.width = (100 - pct) + '%';
+      document.getElementById('barSaved').textContent = '-' + formatBytes(originalBytes.length - compressed.length);
+      document.getElementById('barLabelLeft').textContent = `compressed (${pct.toFixed(0)}%)`;
+      document.getElementById('barLabelRight').textContent = `saved (${(100 - pct).toFixed(0)}%)`;
+
+      // Base64
+      document.getElementById('outputBase64').textContent = bytesToBase64(compressed);
+
+      // Hex
+      document.getElementById('outputHex').innerHTML = hexDump(compressed);
+
+    } else {
+      // Decompress mode
+      try {
+        const b64 = text.trim();
+        const bytes = base64ToBytes(b64);
+        const decompressed = await decompress(bytes, currentFormat);
+        const t1 = performance.now();
+
+        document.getElementById('statOriginal').textContent = formatBytes(bytes.length);
+        document.getElementById('statCompressed').textContent = formatBytes(new TextEncoder().encode(decompressed).length);
+        document.getElementById('statRatio').textContent = 'decompressed';
+        document.getElementById('statTime').textContent = (t1 - t0).toFixed(1) + 'ms';
+        document.getElementById('comparisonBar').style.display = 'none';
+        document.getElementById('outputBase64').textContent = decompressed;
+        document.getElementById('outputHex').innerHTML = '<div class="empty-state">Hex dump only available for compression</div>';
+      } catch (e) {
+        document.getElementById('outputBase64').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    renderCode();
+  }
+
+  // Compare all formats
+  async function compareAll() {
+    const text = inputText.value;
+    if (!text) return;
+
+    const original = new TextEncoder().encode(text).length;
+    const formats = ['gzip', 'deflate', 'deflate-raw'];
+    const results = [];
+
+    for (const fmt of formats) {
+      const t0 = performance.now();
+      const compressed = await compress(text, fmt);
+      const t1 = performance.now();
+      results.push({
+        format: fmt,
+        size: compressed.length,
+        ratio: ((1 - compressed.length / original) * 100).toFixed(1),
+        time: (t1 - t0).toFixed(1),
+      });
+    }
+
+    const bestIdx = results.reduce((best, r, i) => r.size < results[best].size ? i : best, 0);
+
+    let html = `<table class="fmt-table">
+      <thead><tr><th>Format</th><th>Compressed</th><th>Ratio</th><th>Time</th></tr></thead><tbody>`;
+    results.forEach((r, i) => {
+      const cls = i === bestIdx ? ' class="best-value"' : '';
+      html += `<tr>
+        <td${cls}>${r.format}</td>
+        <td${cls}>${formatBytes(r.size)}</td>
+        <td${cls}>${r.ratio}%</td>
+        <td${cls}>${r.time}ms</td>
+      </tr>`;
+    });
+    html += `</tbody></table>
+    <p style="margin-top:12px;font-size:0.75rem;color:var(--text-dim)">
+      Original: ${formatBytes(original)} | Best: ${results[bestIdx].format} (${results[bestIdx].ratio}% reduction)
+    </p>`;
+
+    document.getElementById('outputCompare').innerHTML = html;
+
+    // Switch to compare tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'compare'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-compare'));
+  }
+
+  // Code generation
+  function renderCode() {
+    const fmt = currentFormat;
+    const html = `<span class="cmt">// Compress text using ${fmt}</span>
+<span class="kw">async function</span> <span class="fn">compressText</span>(text) {
+  <span class="kw">const</span> encoder = <span class="kw">new</span> <span class="fn">TextEncoder</span>();
+  <span class="kw">const</span> data = encoder.<span class="fn">encode</span>(text);
+
+  <span class="cmt">// Create a compression stream</span>
+  <span class="kw">const</span> cs = <span class="kw">new</span> <span class="fn">CompressionStream</span>(<span class="str">'${fmt}'</span>);
+  <span class="kw">const</span> writer = cs.writable.<span class="fn">getWriter</span>();
+  writer.<span class="fn">write</span>(data);
+  writer.<span class="fn">close</span>();
+
+  <span class="cmt">// Read compressed output</span>
+  <span class="kw">const</span> reader = cs.readable.<span class="fn">getReader</span>();
+  <span class="kw">const</span> chunks = [];
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> { done, value } = <span class="kw">await</span> reader.<span class="fn">read</span>();
+    <span class="kw">if</span> (done) <span class="kw">break</span>;
+    chunks.<span class="fn">push</span>(value);
+  }
+
+  <span class="cmt">// Combine chunks</span>
+  <span class="kw">const</span> total = chunks.<span class="fn">reduce</span>((a, c) => a + c.length, <span class="num">0</span>);
+  <span class="kw">const</span> result = <span class="kw">new</span> <span class="fn">Uint8Array</span>(total);
+  <span class="kw">let</span> offset = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="kw">const</span> chunk <span class="kw">of</span> chunks) {
+    result.<span class="fn">set</span>(chunk, offset);
+    offset += chunk.length;
+  }
+  <span class="kw">return</span> result;
+}
+
+<span class="cmt">// Decompress</span>
+<span class="kw">async function</span> <span class="fn">decompressBytes</span>(bytes) {
+  <span class="kw">const</span> ds = <span class="kw">new</span> <span class="fn">DecompressionStream</span>(<span class="str">'${fmt}'</span>);
+  <span class="kw">const</span> writer = ds.writable.<span class="fn">getWriter</span>();
+  writer.<span class="fn">write</span>(bytes);
+  writer.<span class="fn">close</span>();
+  <span class="kw">const</span> reader = ds.readable.<span class="fn">getReader</span>();
+  <span class="kw">const</span> chunks = [];
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> { done, value } = <span class="kw">await</span> reader.<span class="fn">read</span>();
+    <span class="kw">if</span> (done) <span class="kw">break</span>;
+    chunks.<span class="fn">push</span>(value);
+  }
+  <span class="kw">const</span> total = chunks.<span class="fn">reduce</span>((a, c) => a + c.length, <span class="num">0</span>);
+  <span class="kw">const</span> result = <span class="kw">new</span> <span class="fn">Uint8Array</span>(total);
+  <span class="kw">let</span> off = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="kw">const</span> c <span class="kw">of</span> chunks) { result.<span class="fn">set</span>(c, off); off += c.length; }
+  <span class="kw">return new</span> <span class="fn">TextDecoder</span>().<span class="fn">decode</span>(result);
+}
+
+<span class="cmt">// Usage</span>
+<span class="kw">const</span> compressed = <span class="kw">await</span> <span class="fn">compressText</span>(<span class="str">'Hello World!'</span>);
+<span class="kw">const</span> original = <span class="kw">await</span> <span class="fn">decompressBytes</span>(compressed);
+console.<span class="fn">log</span>(original); <span class="cmt">// "Hello World!"</span>
+
+<span class="cmt">// Supported formats: 'gzip', 'deflate', 'deflate-raw'</span>
+<span class="cmt">// gzip — adds header/checksum, standard for HTTP</span>
+<span class="cmt">// deflate — zlib wrapper + DEFLATE</span>
+<span class="cmt">// deflate-raw — raw DEFLATE, smallest overhead</span>`;
+
+    document.getElementById('outputCode').innerHTML = html;
+  }
+
+  // Events
+  runBtn.onclick = run;
+  compareBtn.onclick = compareAll;
+
+  inputText.addEventListener('input', () => {
+    const bytes = new TextEncoder().encode(inputText.value).length;
+    inputSize.textContent = formatBytes(bytes);
+  });
+
+  // Format buttons
+  document.querySelectorAll('.format-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFormat = btn.dataset.fmt;
+      renderCode();
+    });
+  });
+
+  // Mode buttons
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      runBtn.textContent = currentMode === 'compress' ? 'Compress' : 'Decompress';
+      inputText.placeholder = currentMode === 'compress' ? 'Paste text here to compress...' : 'Paste Base64 encoded compressed data here...';
+    });
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Sample buttons
+  document.querySelectorAll('.sample-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      inputText.value = SAMPLES[btn.dataset.sample];
+      inputSize.textContent = formatBytes(new TextEncoder().encode(inputText.value).length);
+      run();
+    });
+  });
+
+  // Init
+  renderCode();
+})();
+</script>
+</body>
+</html>
